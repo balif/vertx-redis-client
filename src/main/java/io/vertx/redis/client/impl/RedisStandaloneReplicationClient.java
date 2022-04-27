@@ -24,24 +24,6 @@ import java.util.stream.Collectors;
 import static io.vertx.redis.client.Command.INFO;
 import static io.vertx.redis.client.Request.cmd;
 
-class RedisReplicaEndpoints {
-  private final String master;
-  private final List<String> slaves;
-
-  RedisReplicaEndpoints(String master, List<String> slaves) {
-    this.master = master;
-    this.slaves = Collections.unmodifiableList(slaves);
-  }
-
-  public String getMaster() {
-    return master;
-  }
-
-  public List<String> getSlaves() {
-    return slaves;
-  }
-}
-
 public class RedisStandaloneReplicationClient extends BaseRedisClient implements Redis {
 
   private static final Logger LOG = LoggerFactory.getLogger(RedisStandaloneReplicationClient.class);
@@ -65,8 +47,8 @@ public class RedisStandaloneReplicationClient extends BaseRedisClient implements
 
     vertx.setPeriodic(1000, event -> discoverTopology().onSuccess(rre -> {
       redisReplicaEndpoints = rre;
-      LOG.debug("Redis Master:" + this.redisReplicaEndpoints.getMaster());
-      LOG.debug("Redis Slaves:" + this.redisReplicaEndpoints.getSlaves());
+      LOG.trace("Redis Master:" + this.redisReplicaEndpoints.getMaster());
+      LOG.trace("Redis Slaves:" + this.redisReplicaEndpoints.getSlaves());
     }));
   }
 
@@ -108,7 +90,7 @@ public class RedisStandaloneReplicationClient extends BaseRedisClient implements
       .map(sl -> connectionManager.getConnection(sl, null)
         .map(redisConnection -> new TypeConnection(Type.SLAVE, redisConnection))
         .recover(throwable -> {
-          LOG.info("Connection to slave failed. "+ throwable.getMessage());
+          LOG.info("Connection to slave failed. " + throwable.getMessage());
           forceRediscovery();
           return Future.succeededFuture();
         }))
@@ -165,7 +147,7 @@ public class RedisStandaloneReplicationClient extends BaseRedisClient implements
       final Promise promise = vertx.promise();
       Future<RedisConnection> futureConn = connectionManager.getConnection(endpoint, null);
       futureConn.onFailure(event -> {
-        LOG.info("Discovery skiping endpoint:" + endpoint+ " Message:" + event.getMessage());
+        LOG.info("Discovery skiping endpoint:" + endpoint + " Message:" + event.getMessage());
         promise.complete();
       });
       futureConn.onSuccess(conn -> conn.send(cmd(INFO).arg("REPLICATION"), send -> {
@@ -236,7 +218,7 @@ public class RedisStandaloneReplicationClient extends BaseRedisClient implements
     return info;
   }
 
-  private class EnpointConnection {
+  private static class EnpointConnection {
     private final String endpoint;
     private final RedisConnection connection;
 
@@ -254,7 +236,7 @@ public class RedisStandaloneReplicationClient extends BaseRedisClient implements
     }
   }
 
-  private class TypeConnection {
+  private static class TypeConnection {
     private final Type type;
     private final RedisConnection connection;
 
@@ -266,5 +248,23 @@ public class RedisStandaloneReplicationClient extends BaseRedisClient implements
 
   private enum Type {
     MASTER, SLAVE
+  }
+
+  private static class RedisReplicaEndpoints {
+    private final String master;
+    private final List<String> slaves;
+
+    RedisReplicaEndpoints(String master, List<String> slaves) {
+      this.master = master;
+      this.slaves = Collections.unmodifiableList(slaves);
+    }
+
+    public String getMaster() {
+      return master;
+    }
+
+    public List<String> getSlaves() {
+      return slaves;
+    }
   }
 }
