@@ -47,5 +47,12 @@ public enum RedisClientType {
    * use the {@link RedisReplicas} to define when replica nodes can be
    * used for read only queries.
    */
-  REPLICATION
+  REPLICATION,
+
+  /**
+   * The client should work with one master and read replicas (without cluster mode). When this mode is active
+   * use the {@link RedisReplicas} to define when replica nodes can be
+   * used for read only queries.
+   */
+  STANDALONE_REPLICATION
 }
